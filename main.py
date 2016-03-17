@@ -96,26 +96,21 @@ def combine_simple_filter(variant, names, logics, total_logic, query_keys, na_re
         raise
 
 
+def get_gene(database, gene, gene_column='Gene.refgene'):
+    new_db = database
+    remain_var = []
+    for var in database.variants:
+        if simple_filter(var, gene_column, 'include', gene, na_remain=False):
+            remain_var.append(var)
+    new_db.variants = remain_var
+    return new_db
 
 
 
 
 
 
-test1 = data.Vcf('/Users/rubisco/Desktop/test.vcf')
 
 
-test2 = data.Annovar('/Users/rubisco/Desktop/test.annovar.txt', sample_columns=[81],
-                info_columns=config.default_annovar_infos, vcf_columns=config.default_annovar_vcfs)
-#print test1.title
-#print test2.title
-
-
-for variant in test2.variants:
-    print variant.infos['Gene.refgene']
-    print variant.infos
-    print combine_simple_filter(variant, ['GERP++_RS'], ['is'], 'ALL TRUE', ['.'], na_remains=[True])
-
-    break
 
 
