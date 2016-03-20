@@ -34,8 +34,11 @@ class Vcf():
         return
 
 
+def check_annovar_title():
+    return
+
 class Annovar():
-    def __init__(self, route, sample_columns, info_columns, vcf_columns):
+    def __init__(self, route, sample_columns, info_columns, vcf_columns, id_columns):
         if os.path.exists(route):
             self.variants = []
 
@@ -85,16 +88,17 @@ class Annovar():
 class Variant():
     def __init__(self, info_dict, _format='vcf'):
         if _format == 'vcf':
-            self.info_format = 'vcf'
-            self.chrom = info_dict['CHROM']
-            self.vcfpos = info_dict['POS']
-            self.id = info_dict['ID']
-            self.ref = info_dict['REF']
-            self.alt = info_dict['ALT']
-            self.qual = info_dict['QUAL']
-            self.filter = info_dict['FILTER']
-
             self.infos = {}
+            self.info_format = 'vcf'
+
+            self.infos['chrom'] = info_dict['CHROM']
+            self.infos['vcfpos'] = info_dict['POS']
+            self.infos['id'] = info_dict['ID']
+            self.infos['vcfref'] = info_dict['REF']
+            self.infos['vcfalt'] = info_dict['ALT']
+            self.infos['qual'] = info_dict['QUAL']
+            self.infos['filter'] = info_dict['FILTER']
+
             info_list = info_dict['INFO'].split(';')
             for i in info_list:
                 lt = i.split('=')
@@ -115,17 +119,17 @@ class Variant():
 
         elif _format == 'wannovar':
             self.info_format = 'annovar'
-            self.chrom = info_dict['ids']['Chr']
-            self.pos_start = info_dict['ids']['Start']
-            self.pos_end = info_dict['ids']['End']
-            self.ref = info_dict['ids']['Ref']
-            self.alt = info_dict['ids']['Alt']
             self.infos = info_dict['infos']
 
-            self.vcfpos = info_dict['vcfs']['POS']
-            self.id = info_dict['vcfs']['ID']
-            self.qual = info_dict['vcfs']['QUAL']
-            self.filter = info_dict['vcfs']['FILTER']
+            self.infos['chrom'] = info_dict['ids']['Chr']
+            self.infos['pos_start'] = info_dict['ids']['Start']
+            self.infos['pos_end'] = info_dict['ids']['End']
+            self.infos['vcfref'] = info_dict['ids']['Ref']
+            self.infos['vcfalt'] = info_dict['ids']['Alt']
+            self.infos['vcfpos'] = info_dict['vcfs']['POS']
+            self.infos['id'] = info_dict['vcfs']['ID']
+            self.infos['qual'] = info_dict['vcfs']['QUAL']
+            self.infos['filter'] = info_dict['vcfs']['FILTER']
 
             info_list = info_dict['vcfs']['INFO'].split(';')
             for i in info_list:
@@ -151,12 +155,14 @@ class Variant():
 
 
 class Sample():
+    def __init__(self, health_type, infos):
+        self.type = health_type
+
     pass
 
 
 class Gene():
     pass
-
 
 
 
