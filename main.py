@@ -4,7 +4,71 @@ import config
 import re
 
 
-def simple_filter(variant, name, logic, query_key, na_char='.', na_remain=True):
+def get_value(variant, name):
+    try:
+        value = variant.infos[name]
+    except KeyError:
+        print "Error: variant information dict do not contain name:", name
+        raise
+    return value
+
+
+def check_na(value, na_char):
+    if value in na_char:
+        return True
+    else:
+        return False
+
+
+def search_words(pat, text):
+    pattern = re.compile(r'%s' %pat,re.S)
+    match = pattern.search(text)
+    if match:
+        return match.group()
+    else:
+        return None
+
+    # search a string and return the FIRST matched word in a list.
+
+
+def get_samples_gt_from_variant(sample_list, variant):
+    rl = []
+    for i in sample_list:
+        gt = variant.samples[i]['GT']
+        if gt in config.genotype_empty_symble:
+            rl.append('no')
+            continue
+        gtl = gt.split('/')
+        if len(gtl) != 2:
+            rl.append('other')
+        elif gtl[0] == gtl[1]:
+            rl.append('hom')  # gt == '1/1', '2/2', ...
+        else:
+            rl.append('het')  # gt == '0/1', '1/2', ...
+    return rl
+
+
+def make_combination(lists, max_com=2):
+    total_list = []
+    len_lists = len(lists)
+    if len_lists == max_com:
+        return [lists]
+    elif max_com == 1:
+        for t in lists:
+            total_list.append([t])
+        return total_list
+    elif max_com > len_lists:
+        print 'Error max_com'
+    else:
+        for i in range(len_lists-max_com+1):
+            settle = lists[i]
+            unsettle = make_combination(lists[i+1:], max_com-1)
+            for k in unsettle:
+                total_list.append([settle]+k)
+    return total_list
+
+
+def simple_filter(variant, name, logic, query_key, na_char=config.info_na_char, na_remain=True):
 
     value = get_value(variant, name)
 
@@ -47,34 +111,7 @@ def simple_filter(variant, name, logic, query_key, na_char='.', na_remain=True):
             raise
 
 
-def get_value(variant, name):
-    try:
-        value = variant.infos[name]
-    except KeyError:
-        print "Error: variant information dict do not contain name:", name
-        raise
-    return value
-
-
-def check_na(value, na_char):
-    if value in na_char:
-        return True
-    else:
-        return False
-
-
-def search_words(pat, text):
-    pattern = re.compile(r'%s' %pat,re.S)
-    match = pattern.search(text)
-    if match:
-        return match.group()
-    else:
-        return None
-
-    # search a string and return the FIRST matched word in a list.
-
-
-def combine_simple_filter(variant, names, logics, total_logic, query_keys, na_remains, na_char='.'):
+def combine_simple_filter(variant, names, logics, total_logic, query_keys, na_remains, na_char=config.info_na_char):
     judge_list = []
     for i in range(len(names)):
         judge_list.append(
@@ -96,6 +133,7 @@ def combine_simple_filter(variant, names, logics, total_logic, query_keys, na_re
     else:
         print 'Error: Unknown combine logic term:', total_logic
         raise
+# input single variant, filter rules list, combine several single column filter and give a final result.
 
 
 def get_gene_variants(database, gene, gene_column=config.gene_name_column_in_wannovar):
@@ -104,6 +142,7 @@ def get_gene_variants(database, gene, gene_column=config.gene_name_column_in_wan
         if simple_filter(var, gene_column, 'include', gene, na_remain=False):
             remain_var.append(var)
     return remain_var
+# input single gene, return gene's variant in a given database (file).
 
 
 def get_samples_variants(database, samples, empty_sample_GT='0/0'):
@@ -121,51 +160,16 @@ def get_samples_variants(database, samples, empty_sample_GT='0/0'):
             remain_var.append(var)
 
     return remain_var
-
-
-def get_samples_gt_from_variant(sample_list, variant):
-    rl = []
-    for i in sample_list:
-        gt = variant.samples[i]['GT']
-        if gt in config.genotype_empty_symble:
-            rl.append('no')
-            continue
-        gtl = gt.split('/')
-        if len(gtl) != 2:
-            rl.append('other')
-        elif gtl[0] == gtl[1]:
-            rl.append('hom')  # gt == '1/1', '2/2', ...
-        else:
-            rl.append('het')  # gt == '0/1', '1/2', ...
-    return rl
-
-
-def make_combination(lists, max_com=2):
-    total_list = []
-    len_lists = len(lists)
-    if len_lists == max_com:
-        return [lists]
-    elif max_com == 1:
-        for t in lists:
-            total_list.append([t])
-        return total_list
-    elif max_com > len_lists:
-        print 'Error max_com'
-    else:
-        for i in range(len_lists-max_com+1):
-            settle = lists[i]
-            unsettle = make_combination(lists[i+1:], max_com-1)
-            for k in unsettle:
-                total_list.append([settle]+k)
-    return total_list
+# input samples, return sample's variant in a given database (file).
 
 
 class Cohort():
-    def __init__(self, case_id_list, ctrl_id_list, variants):
+    def __init__(self, case_id_list, ctrl_id_list, variants, cohort_name):
         self.cases = case_id_list
         self.ctrls = ctrl_id_list
         self.sample_list = case_id_list+ctrl_id_list
         self.variants = variants
+        self.name = cohort_name
 
     def dominant_model(self):
         self.dominant_var = []
@@ -239,12 +243,11 @@ class Cohort():
                 self.recessive_compound_var += remain_var
                 self.recessive_compound_gene[gene] = len(remain_var)
         return
-    ''' recessive compound het variants means at least tow mutations
-        occur in one gene that accord with the following rules:
-        1. any cases should carry this variant but not all with gt=hom (all hom is included in recessive hom model);
-        2. not any ctrls carry this variant with gt=hom;
-        3. for pairs of variants in one genes, every ctrl do not carry these pairs at the same time
-    '''
+        # recessive compound het variants means at least tow mutations
+        # occur in one gene that accord with the following rules:
+        # 1. any cases should carry this variant but not all with gt=hom (all hom is included in recessive hom model);
+        # 2. not any ctrls carry this variant with gt=hom;
+        # 3. for pairs of variants in one genes, every ctrl do not carry these pairs at the same time
 
     def other_model(self):
         self.other_var = []
@@ -254,8 +257,7 @@ class Cohort():
             if 'other' in cases_gt or 'other' in ctrls_gt:
                 self.other_var.append(var)
 
-
-    def return_vcf(self):
+    def return_vcf(self, head, model, route=''):
         return
 
     def return_annovar(self):
