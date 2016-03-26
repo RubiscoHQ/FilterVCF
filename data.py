@@ -232,18 +232,42 @@ class Variant():
 
 
 class Sample():
-    def __init__(self, health_type, infos):
-        self.type = health_type
+    def __init__(self, sample_line):
+        ll = sample_line.strip().split('\t')
+        self.family = ll[0]
+        self.id = ll[1]
+        self.type = ll[2]
+        self.gender = ll[3]
+        self.father = ll[4]
+        self.mother = ll[5]
+        return
 
-    pass
+
+class SampleGroup():
+    def __init__(self, froute):
+        self.samples = []
+        f = open(froute)
+        title = True
+        for line in f:
+            if title:
+                title = False
+                continue
+            self.samples.append(Sample(line))
+        self.ctrls = []
+        self.cases = []
+        for i in self.samples:
+            if i.type == 'Ctrl':
+                self.ctrls.append(i)
+            elif i.type == 'Case':
+                self.cases.append(i)
+            else:
+                print 'Error: Unknown sample type:', i, 'in sample info file.'
+                raise
+
 
 
 class Gene():
     pass
-
-
-
-
 
 
 

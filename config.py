@@ -52,4 +52,4 @@ genotype_empty_symble = ['0/0', './.']
 gene_name_column_in_wannovar = 'Gene.refgene'
 
 
-info_na_char = '.'
+info_na_char = ['.', '']
