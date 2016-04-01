@@ -63,6 +63,9 @@ def interpret_cmd(cmd_list):
             print 'Error: can not interpret flag:', flag
             raise
 
+    if len(cmd_dict['column_filter']) == 1 and 'total_logic' not in cmd_dict:
+        cmd_dict['total_logic'] = 'ALL_TRUE'
+
     return cmd_dict
 
 
@@ -152,15 +155,15 @@ print '#==> STEP 4: Get sample(s), gene(s) and  region(s) variant.'
 try:
     variants = filter.get_samples_variants(variants, command_dict['sample'])
 except KeyError:
-    print '#    Skip some filter for not provide commands.'
+    print '#    Skip sample filter for not provide commands.'
 try:
     variants = filter.get_gene_variants(variants, command_dict['gene'])
 except KeyError:
-    print '#    Skip some filter for not provide commands.'
+    print '#    Skip gene filter for not provide commands.'
 try:
     variants = filter.get_regions_variants(variants, command_dict['region'])
 except KeyError:
-    print '#    Skip some filter for not provide commands.'
+    print '#    Skip region filter for not provide commands.'
 print '#   ', len(variants), 'variants remained'
 
 
@@ -179,9 +182,9 @@ try:
     f.write(database.title)
     for variant in variants:
         f.write(variant.return_annovar_line(title=database.title.strip().split('\t'),
-                                      sample_columns=title_dict['samples'],
-                                      info_columns=title_dict['infos'],
-                                      vcf_columns=title_dict['vcfs']))
+                                            sample_columns=title_dict['samples'],
+                                            info_columns=title_dict['infos'],
+                                            vcf_columns=title_dict['vcfs']))
     print '#==> write variants into file:', command_dict['output']
 except KeyError:
     print database.title
