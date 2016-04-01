@@ -38,16 +38,16 @@ For every families:
 Specify the filename of filter result.
 
 ## Examples
-#### Load input file, sample file, output to a file.
+- Load input file, sample file, output to a file.
 	python main.py -I ./test/test.annovar -SI ./test/sample_info.txt -O filter_result
 
-#### Filter by genes, samples, regions.
+- Filter by genes, samples, regions.
 	python main.py -I ./test/test.annovar -SI ./test/sample_info.txt -O filter_result -S 1 2 3 -G USH2A -R chr1 215800000 216200000
 
-#### Use two column filter, one is to select allele frequency larger than 0.10 in 1000G\_ALL (1000 genomes all), the other is to select prediction of Polyphen2 is not B (Benign). The overall logic is ALL\_TRUE, which means both judgements of two filter should be TRUE.
+- Use two column filter, one is to select allele frequency larger than 0.10 in 1000G\_ALL (1000 genomes all), the other is to select prediction of Polyphen2 is not B (Benign). The overall logic is ALL\_TRUE, which means both judgements of two filter should be TRUE.
 	python main.py -I ./test/test.annovar -SI ./test/sample_info.txt -O filter_result -CF 1000G_ALL '<=' 0.10 F -CF Polyphen2_HDIV_pred '!is' B F -TL ALL_TRUE
 
-Select samples from same family, apply Dominant model to them.
+- Select samples from same family, apply Dominant model to them.
 	python main.py -I ./test/test.annovar -SI ./test/sample_info.txt -O filter_result -S 1 2 3 -G USH2A -M Dom
 
 [1]:	#
