@@ -63,8 +63,9 @@ def interpret_cmd(cmd_list):
             print 'Error: can not interpret flag:', flag
             raise
 
-    if len(cmd_dict['column_filter']) == 1 and 'total_logic' not in cmd_dict:
-        cmd_dict['total_logic'] = 'ALL_TRUE'
+    if 'total_logic' in cmd_dict:
+        if len(cmd_dict['column_filter']) == 1 and 'total_logic' not in cmd_dict:
+            cmd_dict['total_logic'] = 'ALL_TRUE'
 
     return cmd_dict
 
@@ -178,7 +179,7 @@ print '#   ', len(variants), 'variants remained'
 print '#==> End'
 
 try:
-    f = open(command_dict['output'], 'w')
+    f = open(command_dict['output']+'.annovar', 'w')
     f.write(database.title)
     for variant in variants:
         f.write(variant.return_annovar_line(title=database.title.strip().split('\t'),
