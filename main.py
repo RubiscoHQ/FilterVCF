@@ -10,28 +10,28 @@ def interpret_cmd(cmd_list):
     flag = ''
     for cmd in cmd_list:
         if cmd[0] == '-' or flag == '':
-            if cmd in ['--input', '-I']:
+            if cmd in ['-input', '-I']:
                 flag = 'input'
-            elif cmd in ['--sample_info', '-SI']:
+            elif cmd in ['-sample_info', '-SI']:
                 flag = 'sample_info'
-            elif cmd in ['--sample', '-S']:
+            elif cmd in ['-sample', '-S']:
                 flag = 'sample'
                 cmd_dict[flag] = []
-            elif cmd in ['--gene', '-G']:
+            elif cmd in ['-gene', '-G']:
                 flag = 'gene'
                 cmd_dict[flag] = []
-            elif cmd in ['--region', '-R']:
+            elif cmd in ['-region', '-R']:
                 flag = 'region'
                 cmd_dict[flag] = []
-            elif cmd in ['--column_filter', '-CF']:
+            elif cmd in ['-column_filter', '-CF']:
                 flag = 'column_filter'
                 cmd_dict[flag] = []
-            elif cmd in ['--model', '-M']:
+            elif cmd in ['-model', '-M']:
                 flag = 'model'
                 cmd_dict[flag] = []
-            elif cmd in ['--total_logic', '-TL']:
+            elif cmd in ['-total_logic', '-TL']:
                 flag = 'total_logic'
-            elif cmd in ['--output', '-O']:
+            elif cmd in ['-output', '-O']:
                 flag = 'output'
             else:
                 print 'Error: can not interpret command:', cmd

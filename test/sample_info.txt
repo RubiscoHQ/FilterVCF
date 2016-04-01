@@ -1,0 +1,5 @@
+FamilyID	SampleID	Type	Gender	Father	Mother
+1	1	Case	M	.	.
+1	2	Ctrl	F	.	.
+1	3	Case	M	1	22	4	Case	M	.	.
+3	5	Ctrl	F	.	.
