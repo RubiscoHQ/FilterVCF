@@ -59,6 +59,16 @@ class Annovar():
                 if title:
                     self.title = line
                     title_list = line.strip().split('\t')
+                    strip_title = []
+                    for i in title_list:
+                        if i.lower() != 'otherinfo':
+                            strip_title.append(i)
+                    self.no_otherinfo_title = '\t'.join(strip_title) + '\n'
+
+                    tem_list = []
+                    for i in title_list:
+                        tem_list.append(i.lower())
+                    title_list = tem_list
                     self.sample_list = []
                     for i in sample_columns:
                         self.sample_list.append(title_list[i])
@@ -82,7 +92,6 @@ class Annovar():
                     info_dict['ids'] = {}
                     for i in range(5):
                         info_dict['ids'][title_list[i]] = info_list[i]
-
                     self.variants.append(Variant(info_dict, _format='wannovar'))
         else:
             print 'Error: file do not exist', route
@@ -113,15 +122,15 @@ class Variant():
             self.infos = {}
             self.info_format = 'vcf'
 
-            self.infos['chrom'] = info_dict['CHROM']
-            self.infos['vcfpos'] = info_dict['POS']
-            self.infos['id'] = info_dict['ID']
-            self.infos['vcfref'] = info_dict['REF']
-            self.infos['vcfalt'] = info_dict['ALT']
-            self.infos['qual'] = info_dict['QUAL']
-            self.infos['filter'] = info_dict['FILTER']
+            self.infos['chrom'] = info_dict['chrom']
+            self.infos['vcfpos'] = info_dict['pos']
+            self.infos['id'] = info_dict['id']
+            self.infos['vcfref'] = info_dict['ref']
+            self.infos['vcfalt'] = info_dict['alt']
+            self.infos['qual'] = info_dict['qual']
+            self.infos['filter'] = info_dict['filter']
 
-            info_list = info_dict['INFO'].split(';')
+            info_list = info_dict['info'].split(';')
             for i in info_list:
                 lt = i.split('=')
                 try:
@@ -129,7 +138,7 @@ class Variant():
                 except IndexError:
                     self.infos[lt[0]] = ''
 
-            self.vcfformat = info_dict['FORMAT']
+            self.vcfformat = info_dict['format']
             format_list = self.vcfformat.split(':')
 
             self.samples = {}
@@ -143,19 +152,19 @@ class Variant():
             self.info_format = 'annovar'
             self.infos = info_dict['infos']
 
-            self.infos['chrom'] = info_dict['ids']['Chr']
-            self.infos['pos_start'] = info_dict['ids']['Start']
-            self.infos['pos_end'] = info_dict['ids']['End']
-            self.infos['annovarref'] = info_dict['ids']['Ref']
-            self.infos['annovaralt'] = info_dict['ids']['Alt']
-            self.infos['vcfref'] = info_dict['vcfs']['REF']
-            self.infos['vcfalt'] = info_dict['vcfs']['ALT']
-            self.infos['vcfpos'] = info_dict['vcfs']['POS']
-            self.infos['id'] = info_dict['vcfs']['ID']
-            self.infos['qual'] = info_dict['vcfs']['QUAL']
-            self.infos['filter'] = info_dict['vcfs']['FILTER']
+            self.infos['chrom'] = info_dict['ids']['chr']
+            self.infos['pos_start'] = info_dict['ids']['start']
+            self.infos['pos_end'] = info_dict['ids']['end']
+            self.infos['annovarref'] = info_dict['ids']['ref']
+            self.infos['annovaralt'] = info_dict['ids']['alt']
+            self.infos['vcfref'] = info_dict['vcfs']['ref']
+            self.infos['vcfalt'] = info_dict['vcfs']['alt']
+            self.infos['vcfpos'] = info_dict['vcfs']['pos']
+            self.infos['id'] = info_dict['vcfs']['id']
+            self.infos['qual'] = info_dict['vcfs']['qual']
+            self.infos['filter'] = info_dict['vcfs']['filter']
 
-            info_list = info_dict['vcfs']['INFO'].split(';')
+            info_list = info_dict['vcfs']['info'].split(';')
             self.vcf_infos_names = []
             # save vcf info column item names in order to recover when do return_annoavr_line
             for i in info_list:
@@ -166,15 +175,19 @@ class Variant():
                 except IndexError:
                     self.infos[lt[0]] = ''
 
-            self.vcfformat = info_dict['vcfs']['FORMAT']
-            format_list = self.vcfformat.split(':')
+            if 'format' in info_dict['vcfs'] and 'samples' in info_dict:
+                self.vcfformat = info_dict['vcfs']['format']
+                format_list = self.vcfformat.split(':')
 
-            self.samples = {}
-            for sample in info_dict['samples']:
-                sample_info = info_dict['samples'][sample].split(':')
-                self.samples[sample] = {}
-                for i in range(len(format_list)):
-                    self.samples[sample][format_list[i]] = sample_info[i]
+                self.samples = {}
+                for sample in info_dict['samples']:
+                    sample_info = info_dict['samples'][sample].split(':')
+                    self.samples[sample] = {}
+                    for i in range(len(format_list)):
+                        try:
+                            self.samples[sample][format_list[i]] = sample_info[i]
+                        except IndexError:
+                            self.samples[sample][format_list[i]] = '.'
         else:
             print "Error: Unknow variant type:", _format
             raise
@@ -206,7 +219,7 @@ class Variant():
         # id columns
 
         for i in info_columns:
-            line_list.append(self.infos[title[i]])
+            line_list.append(self.infos[title[i].lower()])
         # info columns
 
         line_list += [self.infos['chrom'], self.infos['vcfpos'], self.infos['id'],
@@ -216,15 +229,20 @@ class Variant():
         for i in self.vcf_infos_names:
             vcf_infos.append(i+'='+self.infos[i])
         line_list.append(';'.join(vcf_infos))
-        line_list.append(self.vcfformat)
-        # vcf columns
 
-        for i in sample_columns:
-            sample = title[i]
-            sample_info = []
-            for item in self.vcfformat.split(':'):
-                sample_info.append(self.samples[sample][item])
-            line_list.append(':'.join(sample_info))
+        if hasattr(self, 'vcfformat'):
+            line_list.append(self.vcfformat)
+            # vcf columns
+
+            for i in sample_columns:
+                try:
+                    sample = title[i].lower()
+                except IndexError:
+                    raise
+                sample_info = []
+                for item in self.vcfformat.split(':'):
+                    sample_info.append(self.samples[sample][item])
+                line_list.append(':'.join(sample_info))
         # sample_columns
 
         line = '\t'.join(line_list) + '\n'
@@ -234,12 +252,12 @@ class Variant():
 class Sample():
     def __init__(self, sample_line):
         ll = sample_line.strip().split('\t')
-        self.family = ll[0]
+        #self.family = ll[0]
         self.id = ll[1]
         self.type = ll[2]
-        self.gender = ll[3]
-        self.father = ll[4]
-        self.mother = ll[5]
+        #self.gender = ll[3]
+        #self.father = ll[4]
+        #self.mother = ll[5]
         return
 
 
@@ -254,12 +272,16 @@ class SampleGroup():
                 continue
             self.samples.append(Sample(line))
         self.ctrls = []
+        self.ctrls_id = []
         self.cases = []
+        self.cases_id = []
         for i in self.samples:
-            if i.type == 'Ctrl':
+            if i.type in ['Ctrl', 'ctrl']:
                 self.ctrls.append(i)
-            elif i.type == 'Case':
+                self.ctrls_id.append(i.id)
+            elif i.type in ['Case', 'case']:
                 self.cases.append(i)
+                self.cases_id.append(i.id)
             else:
                 print 'Error: Unknown sample type:', i, 'in sample info file.'
                 raise

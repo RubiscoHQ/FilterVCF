@@ -5,6 +5,7 @@ import re
 
 
 def get_value(variant, name):
+    name = name.lower()
     try:
         value = variant.infos[name]
     except KeyError:
@@ -34,7 +35,7 @@ def search_words(pat, text):
 def get_samples_gt_from_variant(sample_list, variant):
     rl = []
     for i in sample_list:
-        gt = variant.samples[i.id]['GT']
+        gt = variant.samples[i.id.lower()]['GT']
 
         if gt in config.genotype_empty_symble:
             rl.append('no')

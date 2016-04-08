@@ -1,24 +1,46 @@
 # wannovar file title, update on 2016-03-20
-default_annovar_info_names = ['Func.refgene', 'Gene.refgene', 'GeneDetail.refgene', 'ExonicFunc.refgene',
-                                'AAChange.refgene', '1000G_ALL', '1000G_AFR', '1000G_AMR', '1000G_EAS',
-                                '1000G_EUR', '1000G_SAS', 'ExAC_Freq', 'ExAC_AFR', 'ExAC_AMR', 'ExAC_EAS',
-                                'ExAC_FIN', 'ExAC_NFE', 'ExAC_OTH', 'ExAC_SAS', 'ESP6500si_ALL', 'ESP6500si_AA',
-                                'ESP6500si_EA', 'CG46', 'NCI60', 'dbSNP', 'COSMIC_ID', 'COSMIC_DIS', 'ClinVar_SIG',
-                                'ClinVar_DIS', 'ClinVar_STATUS', 'ClinVar_ID', 'ClinVar_DB', 'ClinVar_DBID',
-                                'GWAS_DIS', 'GWAS_OR', 'GWAS_BETA', 'GWAS_PUBMED', 'GWAS_SNP', 'GWAS_P',
-                                'SIFT_score', 'SIFT_pred', 'Polyphen2_HDIV_score', 'Polyphen2_HDIV_pred',
-                                'Polyphen2_HVAR_score', 'Polyphen2_HVAR_pred', 'LRT_score', 'LRT_pred',
-                                'MutationTaster_score', 'MutationTaster_pred', 'MutationAssessor_score',
-                                'MutationAssessor_pred', 'FATHMM_score', 'FATHMM_pred', 'RadialSVM_score',
-                                'RadialSVM_pred', 'LR_score', 'LR_pred', 'VEST3_score', 'CADD_raw', 'CADD_phred',
-                                'GERP++_RS', 'phyloP46way_placental', 'phyloP100way_vertebrate', 'SiPhy_29way_logOdds']
+default_annovar_info_names = ['1000g2014oct_all', '1000g2014oct_eas', '1000g2014oct_sas', '1000g_afr',
+                              '1000g_all', '1000g_amr', '1000g_eas', '1000g_eur', '1000g_sas', 'cadd',
+                              'esp6500siv2_aa', 'esp6500siv2_all', 'esp6500siv2_ea', 'exac_all', 'popfreqmax',
+                              'aachange.refgene', 'cadd_phred', 'cadd_raw', 'cg46', 'clinvar_20150330',
+                              'clinvar_db', 'clinvar_dbid',
+                              'clinvar_dis', 'clinvar_id', 'clinvar_sig', 'clinvar_status', 'cosmic_dis',
+                              'cosmic_id', 'cytoband', 'dbsnp', 'esp6500si_aa', 'esp6500si_all', 'esp6500si_ea',
+                              'esp6500siv2_all', 'exac_afr', 'exac_amr', 'exac_eas', 'exac_fin', 'exac_freq',
+                              'exac_nfe', 'exac_oth', 'exac_sas', 'exonicfunc.refgene', 'fathmm_pred',
+                              'fathmm_score', 'func.refgene', 'gene.refgene', 'genedetail.refgene', 'gerp++_rs',
+                              'gwas_beta', 'gwas_dis', 'gwas_or', 'gwas_p', 'gwas_pubmed', 'gwas_snp',
+                              'lr_pred', 'lr_score', 'lrt_pred', 'lrt_score', 'mutationassessor_pred',
+                              'mutationassessor_score', 'mutationtaster_pred', 'mutationtaster_score',
+                              'nci60', 'phylop100way_vertebrate', 'phylop46way_placental', 'polyphen2_hdiv_pred',
+                              'polyphen2_hdiv_score', 'polyphen2_hvar_pred', 'polyphen2_hvar_score',
+                              'radialsvm_pred', 'radialsvm_score', 'sift_pred', 'sift_score', 'siphy_29way_logodds',
+                              'snp138', 'vest3_score']
 
-default_annovar_ids = ['Chr', 'Start', 'End', 'Ref', 'Alt']
-
-default_vcf_title = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
 
 
-def check_annovar_title(route):
+default_annovar_ids = ['chr', 'start', 'end', 'ref', 'alt']
+
+default_vcf_title = ['chrom', 'pos', 'id', 'ref', 'alt', 'qual', 'filter', 'info', 'format']
+
+default_skip = ['otherinfo']
+
+
+def get_sample_id_from_sample_file(route):
+    f = open(route)
+    title = True
+    idl = []
+    for line in f:
+        if title:
+            title = False
+            continue
+        id = line.split('\t')[1]
+        idl.append(id.lower())
+    return idl
+
+
+
+def check_annovar_title(route, sample_file):
     f = open(route)
     title = f.readline()
     title_list = title.strip().split('\t')
@@ -31,25 +53,57 @@ def check_annovar_title(route):
                'vcfs': [i for i in range(72, 81)],
                'samples': [i for i in range(81, len(title_list))]}
     else:
+        sample_ids = get_sample_id_from_sample_file(sample_file)
         dic = {'ids': [], 'infos': [], 'vcfs': [], 'samples': []}
+        unknown = []
         for i in title_list:
-            if i in default_annovar_ids:
-                dic['ids'].append(i)
-            elif i in default_annovar_info_names:
-                dic['infos'].append(i)
-            elif i in default_vcf_title:
-                dic['vcfs'].append(i)
+            ilower = i.lower()
+            if ilower == 'ref':
+                if title_list[title_list.index(i)-1].lower() == 'end':
+                    dic['ids'].append(title_list.index(i))
+                elif title_list[title_list.index(i) - 1].lower() == 'id':
+                    dic['vcfs'].append(title_list.index(i))
+                else:
+                    print "Error, the %d column name of your title %s is invalid. Doesn't match vcf nor annovar."\
+                          % (title_list.index(i), 'ref')
+                    raise
+            elif ilower == 'alt':
+                if title_list[title_list.index(i) - 2].lower() == 'end':
+                    dic['ids'].append(title_list.index(i))
+                elif title_list[title_list.index(i) - 2].lower() == 'id':
+                    dic['vcfs'].append(title_list.index(i))
+                else:
+                    print "Error, the %d column name of your title %s is invalid. Doesn't match vcf nor annovar." \
+                          % (title_list.index(i), 'ref')
+                    raise
+
+            elif ilower in default_annovar_ids:
+                dic['ids'].append(title_list.index(i))
+            elif ilower in default_annovar_info_names:
+                dic['infos'].append(title_list.index(i))
+            elif ilower in default_vcf_title:
+                dic['vcfs'].append(title_list.index(i))
+            elif ilower in default_skip:
+                continue
+            elif ilower in sample_ids:
+                dic['samples'].append(title_list.index(i))
             else:
-                print 'Unknown column:', i
-        print 'Annovar title is not default, please revise it or specify specific column types or revise config.py.'
-        raise
+                unknown.append(i)
+        if unknown != []:
+            print 'Warming: %d columns are unknown in input file:' % len(unknown)
+            print unknown
+            user_input = raw_input('Will you ignore these unknown columns? (Y/N)')
+            if user_input.upper() != 'Y':
+                print 'Exit without filtering.\nPlease revise the column name in your input file or add new names into config.py'
+                raise
     return dic
 
 
 genotype_empty_symble = ['0/0', './.']
 
 
-gene_name_column_in_wannovar = 'Gene.refgene'
+gene_name_column_in_wannovar = 'gene.refgene'
 
 
 info_na_char = ['.', '']
+

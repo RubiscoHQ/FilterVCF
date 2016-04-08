@@ -16,19 +16,24 @@ def interpret_cmd(cmd_list):
                 flag = 'sample_info'
             elif cmd in ['-sample', '-S']:
                 flag = 'sample'
-                cmd_dict[flag] = []
+                if flag not in cmd_dict:
+                    cmd_dict[flag] = []
             elif cmd in ['-gene', '-G']:
                 flag = 'gene'
-                cmd_dict[flag] = []
+                if flag not in cmd_dict:
+                    cmd_dict[flag] = []
             elif cmd in ['-region', '-R']:
                 flag = 'region'
-                cmd_dict[flag] = []
+                if flag not in cmd_dict:
+                    cmd_dict[flag] = []
             elif cmd in ['-column_filter', '-CF']:
                 flag = 'column_filter'
-                cmd_dict[flag] = []
+                if flag not in cmd_dict:
+                    cmd_dict[flag] = []
             elif cmd in ['-model', '-M']:
                 flag = 'model'
-                cmd_dict[flag] = []
+                if flag not in cmd_dict:
+                    cmd_dict[flag] = []
             elif cmd in ['-total_logic', '-TL']:
                 flag = 'total_logic'
             elif cmd in ['-output', '-O']:
@@ -63,20 +68,21 @@ def interpret_cmd(cmd_list):
             print 'Error: can not interpret flag:', flag
             raise
 
-    if 'total_logic' in cmd_dict:
-        if len(cmd_dict['column_filter']) == 1 and 'total_logic' not in cmd_dict:
+    if 'column_filter' in cmd_dict:
+        if len(cmd_dict['column_filter']) == 4 and 'total_logic' not in cmd_dict:
             cmd_dict['total_logic'] = 'ALL_TRUE'
 
     return cmd_dict
 
 
-def load_files(froute):
+def load_files(froute, sample_file):
     ext = os.path.splitext(froute)[1]
     if ext == '.vcf':
         vcf = data.Vcf(froute)
         return vcf, {}
-    elif ext == '.annovar':
-        annovar_title_dict = config.check_annovar_title(froute)
+    elif ext in ['.annovar', '.txt']:
+
+        annovar_title_dict = config.check_annovar_title(froute, sample_file)
         annovar = data.Annovar(froute, sample_columns=annovar_title_dict['samples'],
                                info_columns=annovar_title_dict['infos'],
                                vcf_columns=annovar_title_dict['vcfs'],
@@ -110,10 +116,12 @@ def make_column_filter(cmd_list, total_logic, variants):
                 cmd_dic[flag].append(i)
                 flag = 'name'
 
+    #print cmd_dic
     remain_variants = []
     for variant in variants:
-        if filter.combine_simple_filter(variant, cmd_dic['name'], cmd_dic['logic'], total_logic,
-                                     cmd_dic['query_key'], cmd_dic['na']):
+        if filter.combine_simple_filter(variant=variant, names=cmd_dic['name'], logics=cmd_dic['logic'],
+                                        total_logic=total_logic, query_keys=cmd_dic['query_key'],
+                                        na_remains=cmd_dic['na']):
             remain_variants.append(variant)
     return remain_variants
 
@@ -129,20 +137,21 @@ def apply_model(froute, variants, models):
             remain_var += cohort.recessive_hom_var
         elif model == 'ResComp':
             remain_var += cohort.recessive_compound_var
+        else:
+            print 'Error: Unknown disease model:', model
+            raise
     return remain_var
 
 
 print '#==> STEP 1: Phrasing command'
-
 command_dict = interpret_cmd(argv[1:])
 print '#   ', command_dict
 
 print '#==> STEP 2: Load input files'
 
-database, title_dict = load_files(command_dict['input'])
+database, title_dict = load_files(command_dict['input'], command_dict['sample_info'])
 variants = database.variants
 print '#   ', len(variants), 'variants remained'
-
 
 print '#==> STEP 3: Simple columns filter'
 try:
@@ -155,17 +164,19 @@ print '#   ', len(variants), 'variants remained'
 print '#==> STEP 4: Get sample(s), gene(s) and  region(s) variant.'
 try:
     variants = filter.get_samples_variants(variants, command_dict['sample'])
+    print '#   ', len(variants), 'variants remained by sample filter'
 except KeyError:
     print '#    Skip sample filter for not provide commands.'
 try:
     variants = filter.get_gene_variants(variants, command_dict['gene'])
+    print '#   ', len(variants), 'variants remained by gene filter'
 except KeyError:
     print '#    Skip gene filter for not provide commands.'
 try:
     variants = filter.get_regions_variants(variants, command_dict['region'])
+    print '#   ', len(variants), 'variants remained by region filter'
 except KeyError:
     print '#    Skip region filter for not provide commands.'
-print '#   ', len(variants), 'variants remained'
 
 
 print '#==> STEP 5: Apply disease model.'
@@ -173,20 +184,18 @@ try:
     variants = apply_model(command_dict['sample_info'], variants, command_dict['model'])
 except KeyError:
     print '    Skip model filter'
+
 print '#   ', len(variants), 'variants remained'
 
-
-print '#==> End'
-
 try:
-    f = open(command_dict['output']+'.annovar', 'w')
-    f.write(database.title)
+    print '#==> writing variants into file:', command_dict['output']
+    f = open(command_dict['output']+'.annovar.txt', 'w')
+    f.write(database.no_otherinfo_title)
     for variant in variants:
         f.write(variant.return_annovar_line(title=database.title.strip().split('\t'),
                                             sample_columns=title_dict['samples'],
                                             info_columns=title_dict['infos'],
                                             vcf_columns=title_dict['vcfs']))
-    print '#==> write variants into file:', command_dict['output']
 except KeyError:
     print database.title
     for variant in variants:
@@ -194,4 +203,8 @@ except KeyError:
                                           sample_columns=title_dict['samples'],
                                           info_columns=title_dict['infos'],
                                           vcf_columns=title_dict['vcfs'])
+
+print '#==> End'
+
+
 
